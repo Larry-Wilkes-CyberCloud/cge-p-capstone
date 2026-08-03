@@ -1,0 +1,6 @@
+\# compliant-s3
+
+
+
+This module enforces SC-28, AU-3, AU-6, CM-6, AC-3 on a single S3 bucket.
+

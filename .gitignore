@@ -1,0 +1,11 @@
+# Terraform local cache and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+tfplan
+crash.log
+crash.*.log
+
+# Terraform lock file - actually DO commit this one, so comment it out
+# .terraform.lock.hcl
