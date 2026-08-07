@@ -1,4 +1,4 @@
-# compliant-gcs-bucket
+# Compliant S3 Bucket (Terraform, AWS)
 
 A Terraform module that provisions a Google Cloud Storage bucket with a hardcoded security and compliance floor. Consumers can change business configuration (environment, retention period, naming), but cannot disable, weaken, or opt out of any control enforced inside the module.
 
