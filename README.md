@@ -1,43 +1,51 @@
-# Compliant S3 Bucket (Terraform, AWS)
+# CGE-P Capstone: Compliance-as-Code with Terraform
 
-A Terraform module that provisions a Google Cloud Storage bucket with a hardcoded security and compliance floor. Consumers can change business configuration (environment, retention period, naming), but cannot disable, weaken, or opt out of any control enforced inside the module.
+Hands-on labs building NIST 800-53-aligned cloud infrastructure with Terraform, across AWS and GCP. Each lab enforces its compliance controls in code — not as after-the-fact documentation — with machine-readable evidence captured at apply time.
 
-## What this module enforces
+---
 
-| Control | NIST 800-53 requirement | How it's enforced |
+## Lab 2.3 — Compliant S3 Bucket (Terraform, AWS)
+
+A single Terraform-managed S3 bucket enforcing a hardcoded compliance floor.
+
+**Controls enforced:**
+
+| Control | NIST 800-53 requirement | Implementation |
 |---|---|---|
-| **SC-12** | Cryptographic Key Establishment and Management | The module provisions and owns its own `google_kms_key_ring` and `google_kms_crypto_key` rather than relying on Google-managed default encryption. Key lifecycle is fully under this module's control. |
-| **SC-13** | Cryptographic Protection | The bucket's `encryption.default_kms_key_name` is bound to the module-owned CMEK, not left to bucket defaults. Encryption is applied via approved cryptography (Google Cloud KMS), not optional. |
-| **SC-28** | Protection of Information at Rest | All objects written to the bucket are encrypted at rest using the CMEK, with a 90-day (`7776000s`) automatic key rotation period, hardcoded in `main.tf` and not exposed as a variable. |
-| **AU-11** | Audit Record Retention | `retention_policy.retention_period` is set from `var.retention_days`, with validation requiring `>= 365` days whenever `environment == "prod"`. Retention cannot be set below the compliant floor for production. |
-| **CM-6** | Configuration Settings | Four required labels (`project`, `environment`, `managed_by`, `compliance_scope`) are defined in `locals.required_labels` and merged **on top of** any consumer-supplied labels, so they cannot be overridden or omitted. `uniform_bucket_level_access = true` and `public_access_prevention = "enforced"` are hardcoded baseline settings, not variables. |
+| SC-28 | Protection of Information at Rest | Bucket encryption enforced via AES256 server-side encryption |
+| AU-3 / AU-6 | Content of Audit Records / Audit Review | Logging bucket captures access logs for the data bucket |
+| CM-6 | Configuration Settings | Versioning, public-access-block, and required tags hardcoded, not optional |
+| AC-3 | Access Enforcement | Public access blocked at the bucket-policy level |
 
-## Interface
+**Path:** `primitives/compliant-s3/`
+**Evidence:** `evidence/lab-2-3/` (plan.json, state.json)
 
-**Inputs consumers can set** (`variables.tf`):
-- `gcp_project` – GCP project ID
-- `location` – bucket location (supports multi-region, e.g. `US`)
-- `kms_location` – KMS keyring location (single-region only, e.g. `us-central1`)
-- `project_label` – short project identifier (validated: lowercase, 3–21 chars)
-- `environment` – one of `dev`, `staging`, `prod`
-- `retention_days` – 1–3650, but `>= 365` enforced when `environment == "prod"`
-- `bucket_name_suffix` – globally-unique suffix for bucket/keyring/key naming
-- `labels` – optional additional labels (compliance labels are always merged on top)
+---
 
-**What consumers cannot change:**
-- Encryption algorithm or key ownership (SC-13/SC-28)
-- Key rotation period (SC-12)
-- Uniform bucket-level access or public access prevention (AC-3)
-- The four required compliance labels (CM-6)
-- The production retention floor of 365 days (AU-11)
+## Lab 2.4 — Compliant GCS Bucket Module (Terraform, GCP)
 
-**Outputs** (`outputs.tf`):
-- `bucket_url` – `gs://` URL of the bucket
-- `bucket_self_link` – bucket self-link
-- `kms_key_id` – resource ID of the CMEK protecting the bucket
-- `compliance_attestation` – computed map asserting the state of every enforced control (encryption algorithm, versioning, public access prevention, uniform access, retention period, required-labels presence, KMS rotation period)
+A reusable Terraform module that provisions a Google Cloud Storage bucket with a hardcoded security and compliance floor. Consumers can change business configuration (environment, retention period, naming), but cannot disable, weaken, or opt out of any control enforced inside the module.
 
-## Usage
+**Controls enforced:**
+
+| Control | NIST 800-53 requirement | Implementation |
+|---|---|---|
+| SC-12 | Cryptographic Key Establishment and Management | Module provisions and owns its own `google_kms_key_ring` and `google_kms_crypto_key`, not Google-managed default encryption |
+| SC-13 | Cryptographic Protection | Bucket's `encryption.default_kms_key_name` bound to the module-owned CMEK |
+| SC-28 | Protection of Information at Rest | CMEK encryption with 90-day (`7776000s`) automatic key rotation, hardcoded |
+| AU-11 | Audit Record Retention | `retention_policy.retention_period` set from `var.retention_days`, validated `>= 365` days when `environment == "prod"` |
+| CM-6 | Configuration Settings | Four required labels merged on top of consumer-supplied labels; `uniform_bucket_level_access` and `public_access_prevention` hardcoded |
+| AC-3 | Access Enforcement | Uniform bucket-level access and enforced public access prevention, non-configurable |
+
+**Interface:**
+
+Inputs consumers can set: `gcp_project`, `location`, `kms_location`, `project_label`, `environment`, `retention_days`, `bucket_name_suffix`, `labels`.
+
+What consumers cannot change: encryption/key ownership, key rotation period, uniform access/public prevention, required compliance labels, the 365-day production retention floor.
+
+Outputs: `bucket_url`, `bucket_self_link`, `kms_key_id`, `compliance_attestation` (machine-readable evidence of every enforced control).
+
+**Usage:**
 
 ```hcl
 module "data_bucket" {
@@ -49,17 +57,15 @@ module "data_bucket" {
   retention_days     = 30
   bucket_name_suffix = "dev-data-001"
 }
-
-output "attestation" { value = module.data_bucket.compliance_attestation }
-output "bucket_url"  { value = module.data_bucket.bucket_url }
 ```
 
-Six lines of business configuration yield a bucket enforcing SC-12, SC-13, SC-28, AU-11, and CM-6 (plus AC-3 via uniform access and public access prevention).
+**Negative test:** a `retention_days < 365` value combined with `environment = "prod"` fails at `terraform plan`, before any resource is created, via variable validation — not a runtime API rejection. See `consumers/negative-test/`.
 
-## Evidence
+**Path:** `modules/compliant-gcs-bucket/`
+**Evidence:** `evidence/lab-2-4/` (plan.json, attestation.json, negative-test-output.txt)
 
-The `compliance_attestation` output is the machine-readable evidence artifact for this module — captured via `terraform output -json compliance_attestation` and referenced by later labs (Ch 3 Rego policy checks, Ch 6 OSCAL component definitions).
+---
 
-## Negative test
+## Why this matters
 
-A `retention_days < 365` value combined with `environment = "prod"` fails at `terraform plan`, before any resource is created, via a variable validation block — not a runtime API rejection. See `consumers/negative-test/` for the reproducible failure case.
+Both labs demonstrate the same principle on two different clouds: compliance controls belong inside the infrastructure code itself, where a consumer physically cannot disable them, rather than in a wiki page someone forgets to update. The `compliance_attestation` outputs feed forward into later labs — Rego policy checks that block a merge without proof of compliance, and OSCAL evidence artifacts for formal audit packages.
