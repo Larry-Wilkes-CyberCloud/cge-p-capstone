@@ -1,0 +1,2 @@
+cosign verify-blob --bundle bundle.sig.bundle --certificate-identity-regexp '.*' --certificate-oidc-issuer https://github.com/login/oauth /tmp/bundle-test-001.tar.gz
+Verified OK
