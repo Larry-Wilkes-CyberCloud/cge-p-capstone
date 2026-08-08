@@ -69,3 +69,26 @@ module "data_bucket" {
 ## Why this matters
 
 Both labs demonstrate the same principle on two different clouds: compliance controls belong inside the infrastructure code itself, where a consumer physically cannot disable them, rather than in a wiki page someone forgets to update. The `compliance_attestation` outputs feed forward into later labs — Rego policy checks that block a merge without proof of compliance, and OSCAL evidence artifacts for formal audit packages.
+## Lab 2.5 — Immutable Evidence Vault with Cryptographic Signing (Terraform, AWS)
+
+A chain-of-custody layer for compliance evidence: an S3 vault that refuses deletion by design, and a capture script that hashes, bundles, and uploads evidence with a durable version pointer.
+
+**What it enforces:**
+
+- **S3 Object Lock**, enabled at bucket creation (cannot be retrofitted), in GOVERNANCE mode with a default retention period
+- A **bucket policy denying `s3:DeleteBucket`** to anyone except the account root
+- **Versioning + server-side encryption (AES256)** on every object
+- **Public access fully blocked** at the bucket level
+
+**Capture script (`scripts/capture-evidence.sh`):**
+
+Pulls `plan.json`, `state.json`, git commit metadata, and Terraform version from a target workspace, computes a SHA-256 manifest of every file, bundles everything into a `.tar.gz`, uploads it to the vault, and prints a single-line JSON receipt (`run_id`, `vault`, `key`, `version_id`) for downstream pipelines to consume.
+
+**Proof of immutability:** an object uploaded under active retention was deliberately targeted for deletion. AWS rejected it — `AccessDenied: Access Denied because object protected by object lock` — confirmed in `evidence/lab-2-5/deletion-denied-output.txt`.
+
+**Stretch goal — cryptographic signing:** the evidence bundle was signed with Sigstore Cosign (keyless, OIDC-based) and independently re-verified against the original file, returning `Verified OK`. The signature and verification output are committed evidence: `evidence/lab-2-5/bundle.sig.bundle`, `evidence/lab-2-5/cosign-verify-output.txt`.
+
+**Path:** `primitives/evidence-vault/`, `scripts/capture-evidence.sh`
+**Evidence:** `evidence/lab-2-5/` (receipt.json, deletion-denied-output.txt, cosign-verify-output.txt, bundle.sig.bundle)
+
+---
