@@ -119,3 +119,25 @@ Each policy carries a structured `# METADATA` block mapping the rule to its cont
 
 **Path:** `policies/`, `lab-3-3-fixture/`
 **Evidence:** `evidence/lab-3-3/opa-test-results.json`
+
+
+## Lab 3.4 — Integrating Policy-as-Code with Terraform via Conftest (AWS)
+
+Extends the Lab 3.3 policy library with AWS-typed variants, proving the same NIST 800-53 control IDs survive a cloud change even though the underlying resource types don't. Wires policy evaluation into a fail-closed gate script.
+
+**AWS policy variants added:**
+
+| Control | File | Enforces |
+|---|---|---|
+| SC-28 | `policies/sc28_encryption_aws.rego` | Every `aws_s3_bucket` has a matching `aws_s3_bucket_server_side_encryption_configuration` |
+| AC-3 | `policies/ac3_no_public_aws.rego` | Every `aws_s3_bucket` has a matching `aws_s3_bucket_public_access_block` with all four flags true |
+| CM-6 | `policies/cm6_required_tags_aws.rego` | Every taggable AWS resource carries all four required tags |
+
+**The cross-cloud lesson, proven empirically:** running the original GCP-typed policies against an AWS plan produced false-positive passes — zero GCP resources meant zero violations, not real compliance. Adding cloud-specific variants (matched by Terraform configuration references, since resource IDs are unresolved at plan time) closed that gap.
+
+**The policy gate script (`scripts/policy-gate.sh`):** runs all AWS/cross-cloud namespaces against a workspace's plan, writes combined JSON evidence, and exits non-zero on any failure — the exact script a CI pipeline calls on every pull request.
+
+**Proof of a fail-closed gate:** a deliberately broken copy of the Lab 2.3 workspace (missing its S3 encryption configuration) was fed through the gate. Result: `policy-gate: FAIL`, non-zero exit, and a deny message naming the exact resource and remediation. The compliant original still passes clean.
+
+**Path:** `policies/` (AWS variants), `scripts/policy-gate.sh`
+**Evidence:** `evidence/lab-3-4/` (conftest-pass.json, conftest-fail.json, conftest-results.json)
