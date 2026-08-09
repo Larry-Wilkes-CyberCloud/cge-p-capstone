@@ -69,6 +69,8 @@ module "data_bucket" {
 ## Why this matters
 
 Both labs demonstrate the same principle on two different clouds: compliance controls belong inside the infrastructure code itself, where a consumer physically cannot disable them, rather than in a wiki page someone forgets to update. The `compliance_attestation` outputs feed forward into later labs — Rego policy checks that block a merge without proof of compliance, and OSCAL evidence artifacts for formal audit packages.
+
+
 ## Lab 2.5 — Immutable Evidence Vault with Cryptographic Signing (Terraform, AWS)
 
 A chain-of-custody layer for compliance evidence: an S3 vault that refuses deletion by design, and a capture script that hashes, bundles, and uploads evidence with a durable version pointer.
@@ -92,3 +94,28 @@ Pulls `plan.json`, `state.json`, git commit metadata, and Terraform version from
 **Evidence:** `evidence/lab-2-5/` (receipt.json, deletion-denied-output.txt, cosign-verify-output.txt, bundle.sig.bundle)
 
 ---
+
+
+## Lab 3.3 — Compliance Policies in Rego (OPA, GCP)
+
+Policy-as-code that evaluates a Terraform plan against NIST 800-53 controls before anything applies — turning `terraform plan -json` into the input for automated compliance gates.
+
+**Policies:**
+
+| Control | File | Severity | Enforces |
+|---|---|---|---|
+| SC-28 | `policies/sc28_encryption.rego` | High | Every `google_storage_bucket` has a CMEK `encryption` block |
+| AC-3 | `policies/ac3_no_public.rego` | Critical | Buckets enforce uniform access + public access prevention; firewalls don't expose ports 22/3389 to `0.0.0.0/0` |
+| CM-6 | `policies/cm6_required_tags.rego` | Medium | Every taggable resource carries all four required compliance labels |
+
+Each policy carries a structured `# METADATA` block mapping the rule to its control ID, framework, severity, and remediation text — so a developer who trips a policy gets an actionable fix, not just a red X.
+
+**Test fixture:** `lab-3-3-fixture/` — one fully compliant GCS bucket and three deliberately non-compliant resources, each engineered to trip exactly one policy (missing CMEK, public access, missing labels), plus an open-SSH firewall rule.
+
+**Verified:**
+- `opa test -v policies/` → 8/8 tests passing (unit tests per policy, both compliant and non-compliant fixtures)
+- `opa eval` against the real `plan.json` correctly isolates each violation — SC-28 caught only the no-CMEK bucket, AC-3 caught the public bucket and the open firewall, CM-6 caught the no-labels bucket with all four missing labels listed
+- The compliant `good` bucket triggered zero violations across all three policies
+
+**Path:** `policies/`, `lab-3-3-fixture/`
+**Evidence:** `evidence/lab-3-3/opa-test-results.json`
