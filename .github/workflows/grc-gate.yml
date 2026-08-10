@@ -70,7 +70,7 @@ jobs:
         if: always()
         run: |
           mkdir -p evidence
-          tfsec "$TF_WORKING_DIR" --format sarif --out evidence/tfsec.sarif || true
+          tfsec "$TF_WORKING_DIR" --config-file .tfsec/config.yml --format sarif --out evidence/tfsec.sarif || true
           python3 scripts/check_tfsec_results.py
 
       - name: Copy plan into evidence
@@ -86,4 +86,3 @@ jobs:
           name: grc-evidence-${{ github.run_id }}
           path: evidence/
           retention-days: 90
-
