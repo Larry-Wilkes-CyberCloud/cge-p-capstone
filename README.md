@@ -163,3 +163,32 @@ Wires the Lab 3.4 policy gate into GitHub Actions, running it on every pull requ
 
 **Path:** `oidc/`, `.github/workflows/grc-gate.yml`, `.tfsec/config.yml`, `scripts/check_conftest_results.py`, `scripts/check_tfsec_results.py`
 **Evidence:** GitHub Actions run history — [green baseline run](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31413586536), PR #2's red→green history, `grc-evidence-<run-id>` artifacts attached to every run (plan.json, conftest-results.json, tfsec.sarif, plan.txt)
+
+## Lab 4.4 — Evidence Management & Chain of Custody (AWS)
+
+Extends the Lab 4.3 pipeline so every CI run cryptographically signs its own evidence and ships it to a WORM-protected vault — turning "we ran a compliance check" into "here is provable, tamper-evident proof that we ran it, when, and that the result hasn't been altered since."
+
+**What was added:**
+
+| Piece | Path | Purpose |
+|---|---|---|
+| Evidence vault (redeployed) | `primitives/evidence-vault/` | S3 bucket with Object Lock in GOVERNANCE mode; the Lab 2.5 vault was destroyed at that lab's cleanup, so this lab redeployed it fresh |
+| Bundle/sign/upload script | `scripts/bundle-sign-upload.sh` | Tars the run's evidence dir, computes its SHA-256, signs it with Cosign (keyless, via Sigstore/Fulcio), and uploads the bundle + checksum + signature + a JSON receipt to the vault |
+| Receipt generator | `scripts/make_receipt.py` | Builds a structured receipt.json (run ID, vault key, S3 version ID, SHA-256, commit, signed-at timestamp) for every signed bundle |
+| Verification script | `scripts/verify-evidence.sh` | Independently re-checks a vaulted bundle's integrity (SHA-256), authenticity (Cosign + Rekor transparency log), and preservation (Object Lock retention status) |
+| CI workflow (restructured) | `.github/workflows/grc-gate.yml` | Conftest and tfsec no longer short-circuit the job on failure — evidence is bundled, signed, and uploaded to the vault on every run, and only the final gate-evaluation step decides pass/fail. This is deliberate: the point of chain of custody is that evidence survives even a failing run. |
+
+**Cosign keyless signing, proven with a real transparency log entry:** each pipeline run signs its evidence bundle with an ephemeral Sigstore-issued certificate bound to the GitHub Actions OIDC identity, and the signature is recorded in the public Rekor log. Run `31419052889` (PR #3) produced Rekor transparency log index `2411325216`.
+
+**The tamper test — a real before/after/restore cycle, not a staged one:**
+
+1. `verify-evidence.sh` against the untouched vaulted bundle: `CHAIN INTACT for run 31419052889` (SHA-256 match, Cosign+Rekor verified, Object Lock retention active).
+2. The vaulted object was deliberately overwritten in S3 with modified content. Because of Object Lock GOVERNANCE mode, this could not delete or replace the original — it only created a new object version.
+3. Re-running `verify-evidence.sh` against the (now current) tampered version: `FAIL: SHA mismatch` — caught immediately, before signature or retention checks even ran.
+4. The original, untouched version was still present underneath (protected by Object Lock) and was restored via `aws s3api copy-object` against its original version ID — its ETag matched the pre-tamper original exactly, confirming byte-for-byte preservation.
+5. Re-running `verify-evidence.sh` one more time: `CHAIN INTACT for run 31419052889` again.
+
+This demonstrates all four chain-of-custody properties with real evidence rather than a hypothetical: authenticity (Cosign/Rekor), integrity (SHA-256, both passing and correctly failing), timeliness (GitHub Actions + Rekor + receipt timestamps), and preservation (Object Lock survived an actual overwrite attempt). Full mapping in [WRITEUP.md](./WRITEUP.md).
+
+**Path:** `primitives/evidence-vault/`, `scripts/bundle-sign-upload.sh`, `scripts/make_receipt.py`, `scripts/verify-evidence.sh`, `.github/workflows/grc-gate.yml`
+**Evidence:** [PR #3](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/pull/3), [signing run 31419052889](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31419052889), Rekor tlog index `2411325216`, [WRITEUP.md](./WRITEUP.md)
