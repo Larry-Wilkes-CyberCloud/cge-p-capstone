@@ -5,10 +5,8 @@ terraform {
     random = { source = "hashicorp/random", version = "~> 3.6" }
   }
 }
-
 provider "aws" {
   region = "us-east-1"
-
   # CM-6: Configuration settings, required compliance tags applied to every
   # taggable resource by default. Removes the chance of forgetting them.
   default_tags {
@@ -20,21 +18,17 @@ provider "aws" {
     }
   }
 }
-
 resource "random_id" "bucket_suffix" {
   byte_length = 4
 }
-
 locals {
   effective_suffix = var.bucket_suffix != "" ? var.bucket_suffix : random_id.bucket_suffix.hex
   primary_name     = "${var.project_name}-${var.environment}-data-${local.effective_suffix}"
   log_name         = "${var.project_name}-${var.environment}-logs-${local.effective_suffix}"
 }
-
 resource "aws_s3_bucket" "primary" {
   bucket = local.primary_name
 }
-
 # SC-28: Protection of information at rest.
 # AES-256 keeps this lab simple. The commented block below shows how you'd
 # switch to KMS-managed keys, covered in a later lab.
@@ -45,7 +39,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "primary" {
       sse_algorithm = "AES256"
     }
   }
-
   # KMS teaser:
   # rule {
   #   apply_server_side_encryption_by_default {
@@ -55,7 +48,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "primary" {
   #   bucket_key_enabled = true
   # }
 }
-
 # CM-6: Versioning preserves prior object states for recovery and audit.
 resource "aws_s3_bucket_versioning" "primary" {
   bucket = aws_s3_bucket.primary.id
@@ -63,7 +55,6 @@ resource "aws_s3_bucket_versioning" "primary" {
     status = "Enabled"
   }
 }
-
 # AC-3: Access control, explicit deny on every public access vector.
 resource "aws_s3_bucket_public_access_block" "primary" {
   bucket                  = aws_s3_bucket.primary.id
@@ -72,32 +63,35 @@ resource "aws_s3_bucket_public_access_block" "primary" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
 # AU-3 / AU-6: Content of audit records + audit review.
 resource "aws_s3_bucket" "log" {
   bucket = local.log_name
 }
-
+# CM-6: Versioning on the log bucket protects audit records from
+# accidental or malicious deletion, same as the primary bucket.
+resource "aws_s3_bucket_versioning" "log" {
+  bucket = aws_s3_bucket.log.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
 resource "aws_s3_bucket_ownership_controls" "log" {
   bucket = aws_s3_bucket.log.id
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
 }
-
 resource "aws_s3_bucket_acl" "log" {
   depends_on = [aws_s3_bucket_ownership_controls.log]
   bucket     = aws_s3_bucket.log.id
   acl        = "log-delivery-write"
 }
-
 resource "aws_s3_bucket_server_side_encryption_configuration" "log" {
   bucket = aws_s3_bucket.log.id
   rule {
     apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }
-
 resource "aws_s3_bucket_public_access_block" "log" {
   bucket                  = aws_s3_bucket.log.id
   block_public_acls       = true
@@ -105,7 +99,6 @@ resource "aws_s3_bucket_public_access_block" "log" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
-
 resource "aws_s3_bucket_logging" "primary" {
   bucket        = aws_s3_bucket.primary.id
   target_bucket = aws_s3_bucket.log.id

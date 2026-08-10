@@ -19,6 +19,12 @@ resource "aws_iam_openid_connect_provider" "github" {
 resource "aws_iam_role" "grc_gate" {
   name = "cgep-grc-gate"
 
+  # NOTE: GitHub now embeds immutable numeric org/repo IDs in the OIDC
+  # subject claim: repo:ORG@ORG_ID/REPO@REPO_ID:pull_request
+  # Matched here against this repo's actual IDs (captured via a debug
+  # step reading the real token), rather than the plain org/repo name
+  # format the older documentation assumed. This is also more secure:
+  # immune to the trust breaking if the repo is ever renamed.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -27,7 +33,7 @@ resource "aws_iam_role" "grc_gate" {
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:*" }
+        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}@93053015/${var.github_repo}@1322126732:*" }
       }
     }]
   })

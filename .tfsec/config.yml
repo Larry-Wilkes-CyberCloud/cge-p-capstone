@@ -1,0 +1,12 @@
+# tfsec suppressions — every entry must carry a justification.
+#
+# aws-s3-encryption-customer-key: Lab 2.3's compliant-s3 primitive
+# intentionally uses AES256 (SSE-S3) rather than a customer-managed
+# KMS key. This was a deliberate scoping decision documented in
+# main.tf's own comments — CMEK is covered by name in a later lab
+# (Lab 2.4's compliant-gcs-bucket module implements the CMEK pattern
+# on GCP). Suppressing here rather than expanding Lab 2.3's scope
+# retroactively; not a compliance gap being hidden, a sequencing
+# choice being documented.
+exclude:
+  - aws-s3-encryption-customer-key
