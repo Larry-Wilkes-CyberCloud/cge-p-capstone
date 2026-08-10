@@ -20,15 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug OIDC token claims
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const id_token = await core.getIDToken('sts.amazonaws.com');
-            const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString());
-            console.log('sub:', payload.sub);
-            console.log('aud:', payload.aud);
-
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -61,19 +52,38 @@ jobs:
 
       - name: Conftest policy gate
         id: conftest
-        working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-          mkdir -p ../../evidence
+          mkdir -p evidence
           {
             echo "["
             FIRST=1
             for ns in compliance.sc28_aws compliance.ac3_aws compliance.cm6_aws compliance.cm6 ; do
               [[ $FIRST -eq 1 ]] && FIRST=0 || printf ","
-              conftest test --policy ../../policies --namespace "$ns" --output=json plan.json || true
+              conftest test --policy policies --namespace "$ns" --output=json "$TF_WORKING_DIR/plan.json" || true
             done
             echo "]"
-          } > ../../evidence/conftest-results.json
-          python3 -c '
-          import json, sys
-          d = json.load(open("../../evidence/conftest-results.json"))
-          fails =
+          } > evidence/conftest-results.json
+          python3 scripts/check_conftest_results.py
+
+      - name: tfsec scan
+        id: tfsec
+        if: always()
+        run: |
+          mkdir -p evidence
+          tfsec "$TF_WORKING_DIR" --format sarif --out evidence/tfsec.sarif || true
+          python3 scripts/check_tfsec_results.py
+
+      - name: Copy plan into evidence
+        if: always()
+        run: |
+          cp ${{ env.TF_WORKING_DIR }}/plan.json evidence/plan.json
+          cp ${{ env.TF_WORKING_DIR }}/plan.txt  evidence/plan.txt
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grc-evidence-${{ github.run_id }}
+          path: evidence/
+          retention-days: 90
+
