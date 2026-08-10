@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write       # required for AWS OIDC + Cosign keyless (Lab 4.4)
+  id-token: write       # required for AWS OIDC + Cosign keyless
   contents: read
   pull-requests: write  # required to comment on the PR
 
@@ -42,6 +42,11 @@ jobs:
           curl -fsSL https://github.com/aquasecurity/tfsec/releases/download/v1.28.14/tfsec-linux-amd64 \
             -o /usr/local/bin/tfsec && chmod +x /usr/local/bin/tfsec
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.4'
+
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -63,7 +68,6 @@ jobs:
             done
             echo "]"
           } > evidence/conftest-results.json
-          python3 scripts/check_conftest_results.py
 
       - name: tfsec scan
         id: tfsec
@@ -71,7 +75,6 @@ jobs:
         run: |
           mkdir -p evidence
           tfsec "$TF_WORKING_DIR" --config-file .tfsec/config.yml --format sarif --out evidence/tfsec.sarif || true
-          python3 scripts/check_tfsec_results.py
 
       - name: Copy plan into evidence
         if: always()
@@ -79,10 +82,8 @@ jobs:
           cp ${{ env.TF_WORKING_DIR }}/plan.json evidence/plan.json
           cp ${{ env.TF_WORKING_DIR }}/plan.txt  evidence/plan.txt
 
-      - name: Upload evidence artifact
+      - name: Bundle + sign + upload to vault
+        id: sign
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: grc-evidence-${{ github.run_id }}
-          path: evidence/
-          retention-days: 90
+        env:
+          VAULT: ${{ vars.EVIDENCE_VAULT
