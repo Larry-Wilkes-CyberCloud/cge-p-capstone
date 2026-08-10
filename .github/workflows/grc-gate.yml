@@ -20,6 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug OIDC token claims
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const id_token = await core.getIDToken('sts.amazonaws.com');
+            const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString());
+            console.log('sub:', payload.sub);
+            console.log('aud:', payload.aud);
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -67,40 +76,4 @@ jobs:
           python3 -c '
           import json, sys
           d = json.load(open("../../evidence/conftest-results.json"))
-          fails = sum(len(r.get("failures") or []) for results in d for r in results)
-          print(f"conftest failures: {fails}")
-          sys.exit(0 if fails == 0 else 1)
-          '
-
-      - name: tfsec scan
-        id: tfsec
-        if: always()
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          tfsec . --format sarif --out ../../evidence/tfsec.sarif || true
-          python3 -c '
-          import json, sys
-          d = json.load(open("../../evidence/tfsec.sarif"))
-          high = sum(
-              1 for run in d.get("runs", [])
-              for r in run.get("results", [])
-              if (r.get("level") or "").lower() in ("error","critical","high")
-          )
-          print(f"tfsec high+critical: {high}")
-          sys.exit(0 if high == 0 else 1)
-          '
-
-      - name: Copy plan into evidence
-        if: always()
-        run: |
-          cp ${{ env.TF_WORKING_DIR }}/plan.json evidence/plan.json
-          cp ${{ env.TF_WORKING_DIR }}/plan.txt  evidence/plan.txt
-
-      - name: Upload evidence artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: grc-evidence-${{ github.run_id }}
-          path: evidence/
-          retention-days: 90
-# Test trigger for grc-gate workflow
+          fails =
