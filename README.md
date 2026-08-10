@@ -141,3 +141,25 @@ Extends the Lab 3.3 policy library with AWS-typed variants, proving the same NIS
 
 **Path:** `policies/` (AWS variants), `scripts/policy-gate.sh`
 **Evidence:** `evidence/lab-3-4/` (conftest-pass.json, conftest-fail.json, conftest-results.json)
+
+## Lab 4.3 — Building a GRC Evidence Pipeline (AWS + GitHub Actions)
+
+Wires the Lab 3.4 policy gate into GitHub Actions, running it on every pull request with AWS OIDC federation — no long-lived credentials stored anywhere. The workflow file itself is the evidence: `.github/workflows/grc-gate.yml` maps directly to CM-3, CM-6, CA-2, CA-7, RA-5, and AU-9.
+
+**Infrastructure:**
+
+| Piece | Path | Purpose |
+|---|---|---|
+| OIDC trust module | `oidc/` | Creates the AWS IAM OIDC provider + a repo-scoped IAM role, so GitHub Actions can assume AWS credentials without storing keys |
+| CI workflow | `.github/workflows/grc-gate.yml` | Runs on every PR: Terraform plan → Conftest policy gate → tfsec scan → evidence artifact upload |
+| tfsec suppression | `.tfsec/config.yml` | One documented suppression (AES256 vs CMEK — an intentional Lab 2.3 scoping decision, not a hidden gap), everything else must pass clean |
+| Check scripts | `scripts/check_conftest_results.py`, `scripts/check_tfsec_results.py` | Parse tool output and decide pass/fail — pulled out of the workflow YAML for reliability |
+
+**A real debugging story worth noting:** the initial OIDC setup failed with `Not authorized to perform sts:AssumeRoleWithWebIdentity` despite a syntactically correct trust policy. Root cause, found by decoding the actual OIDC token in a debug step: GitHub now embeds immutable numeric org/repo IDs into the subject claim (`repo:ORG@ORG_ID/REPO@REPO_ID:pull_request`), not just plain names — a security hardening measure most reference docs haven't caught up to yet. Fixed by matching the trust policy against the real claim format.
+
+**Real findings caught along the way, not staged ones:** the initial clean run surfaced a genuine tfsec gap — the log bucket was missing versioning. Fixed for real (not suppressed). A second finding (AES256 vs customer-managed KMS on the primary bucket) was a deliberate Lab 2.3 scoping choice, documented and suppressed with a written justification rather than silently ignored.
+
+**Red/green PR demonstration:** PR #2 deliberately weakened the primary bucket's public access block (`block_public_acls = false`). Both Conftest (AC-3) and tfsec independently caught it — the PR's own workflow run went from failure to success within the same PR's history once reverted, proving the gate blocks a real violation and passes a real fix.
+
+**Path:** `oidc/`, `.github/workflows/grc-gate.yml`, `.tfsec/config.yml`, `scripts/check_conftest_results.py`, `scripts/check_tfsec_results.py`
+**Evidence:** GitHub Actions run history — [green baseline run](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31413586536), PR #2's red→green history, `grc-evidence-<run-id>` artifacts attached to every run (plan.json, conftest-results.json, tfsec.sarif, plan.txt)
