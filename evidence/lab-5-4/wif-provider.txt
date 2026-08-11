@@ -1,0 +1,9 @@
+attributeCondition: assertion.repository == "Larry-Wilkes-CyberCloud/cge-p-capstone"
+attributeMapping:
+  attribute.actor: assertion.actor
+  attribute.repository: assertion.repository
+  google.subject: assertion.sub
+name: projects/572032863139/locations/global/workloadIdentityPools/github-actions/providers/github
+oidc:
+  issuerUri: https://token.actions.githubusercontent.com
+state: ACTIVE

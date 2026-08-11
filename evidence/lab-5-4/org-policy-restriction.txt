@@ -1,0 +1,11 @@
+ID              TYPE
+cge-p-capstone  project
+
+--- org-policies list (0 items, confirms no policy hierarchy) ---
+Listed 0 items.
+
+--- terraform apply error (google_org_policy_policy resources) ---
+Error: Error creating Policy: googleapi: Error 403: Permission 'orgpolicy.policies.create' denied on resource '//cloudresourcemanager.googleapis.com/projects/cge-p-capstone' (or it may not exist).
+reason: IAM_PERMISSION_DENIED
+
+Account larrywwilkes@gmail.com holds roles/owner on cge-p-capstone, confirming this is not an IAM role gap but a structural limitation: cge-p-capstone is a standalone project (get-ancestors above shows no Organization or Folder above it), and the Org Policy v2 API's create operation requires a resource hierarchy context that an orgless project does not have. A Google Workspace or Cloud Identity account tied to a verified domain would be required to attach an Organization and unlock this.
