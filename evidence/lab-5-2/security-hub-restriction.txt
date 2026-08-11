@@ -1,0 +1,2 @@
+
+aws: [ERROR]: An error occurred (SubscriptionRequiredException) when calling the EnableSecurityHub operation: The AWS Access Key Id needs a subscription for the service
