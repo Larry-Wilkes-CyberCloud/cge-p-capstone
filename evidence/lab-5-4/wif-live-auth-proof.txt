@@ -1,0 +1,33 @@
+auth-demo	Prove no key file was used	﻿2026-08-11T18:03:13.2535938Z ##[group]Run echo "Authenticated as:"
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2536375Z ^[[36;1mecho "Authenticated as:"^[[0m
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2536704Z ^[[36;1mgcloud auth list --format="value(account)"^[[0m
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2537163Z ^[[36;1mecho "Listing GCS buckets in the project (roles/viewer, no key file):"^[[0m
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2537843Z ^[[36;1mgcloud storage ls --project=cge-p-capstone || echo "(no buckets, or none visible - auth itself is the point)"^[[0m
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2591323Z shell: /usr/bin/bash -e {0}
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2591651Z env:
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2592164Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/cge-p-capstone/cge-p-capstone/gha-creds-9220f54ed31e4707.json
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2592990Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/cge-p-capstone/cge-p-capstone/gha-creds-9220f54ed31e4707.json
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2593721Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/cge-p-capstone/cge-p-capstone/gha-creds-9220f54ed31e4707.json
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2594594Z   CLOUDSDK_CORE_PROJECT: cge-p-capstone
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2594931Z   CLOUDSDK_PROJECT: cge-p-capstone
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2595212Z   GCLOUD_PROJECT: cge-p-capstone
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2595470Z   GCP_PROJECT: cge-p-capstone
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2595773Z   GOOGLE_CLOUD_PROJECT: cge-p-capstone
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2596122Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2596492Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2596776Z ##[endgroup]
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.2693736Z Authenticated as:
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.6985669Z cgep-grc-gate-sa@cge-p-capstone.iam.gserviceaccount.com
+auth-demo	Prove no key file was used	2026-08-11T18:03:13.7978027Z Listing GCS buckets in the project (roles/viewer, no key file):
+auth-demo	Prove no key file was used	2026-08-11T18:03:16.0276854Z ERROR: (gcloud.storage.ls) One or more URLs matched no objects.
+auth-demo	Prove no key file was used	2026-08-11T18:03:16.1690459Z (no buckets, or none visible - auth itself is the point)
+auth-demo	Post Run google-github-actions/auth@v2	﻿2026-08-11T18:03:16.1829907Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+auth-demo	Post Run google-github-actions/auth@v2	2026-08-11T18:03:16.1831403Z Post job cleanup.
+auth-demo	Post Run google-github-actions/auth@v2	2026-08-11T18:03:16.2777456Z Removed exported credentials at "/home/runner/work/cge-p-capstone/cge-p-capstone/gha-creds-9220f54ed31e4707.json".
+auth-demo	Post Run actions/checkout@v4	﻿2026-08-11T18:03:16.2966001Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.2967294Z Post job cleanup.
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.3851732Z [command]/usr/bin/git version
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.3899240Z git version 2.54.0
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.3945744Z Temporarily overriding HOME='/home/runner/work/_temp/81ef3ffc-30a0-4bd8-8f59-f17d8586c509' before making global git config changes
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.3952614Z Adding repository directory to the temporary git global config as a safe directory
+auth-demo	Post Run actions/checkout@v4	2026-08-11T18:03:16.3953929Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/cge-p-capstone/cge-p-capstone
