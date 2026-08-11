@@ -230,3 +230,22 @@ Deploys GCP's identity-first compliance backbone: Workload Identity Federation r
 
 **Path:** `terraform/baselines/gcp/` (main.tf, variables.tf, org_policy.tf commented, wif.tf, audit_logs.tf, outputs.tf), `.github/workflows/gcp-wif-demo.yml`
 **Evidence:** `evidence/lab-5-4/wif-provider.txt`, `evidence/lab-5-4/iam-policy.json`, `evidence/lab-5-4/org-policy-restriction.txt`, `evidence/lab-5-4/wif-live-auth-proof.txt`, [live workflow run](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31520675967)
+
+## Lab 6.1 — Introduction to OSCAL
+
+Everything before this lab produces evidence a human still has to go find. This lab writes the piece that lets an assessor traverse from a control catalog to a profile to a component to a real, verifiable evidence bundle without ever talking to me — using NIST's own compliance-trestle toolkit, not hand-rolled JSON.
+
+**What was built:**
+
+| Piece | Model | Path |
+|---|---|---|
+| Component Definition | Describes how compliant-s3 implements sc-28, ac-3, au-3, cm-6, with a Terraform resource reference and evidence URI per control | oscal/component-definitions/compliant-s3-v1/component-definition.json |
+| Profile | Selects those four controls from the live NIST 800-53 Rev 5 catalog | oscal/profiles/cge-p-minimum/profile.json |
+| Resolved catalog | Output of resolving the profile against the real NIST catalog via trestle | oscal/catalogs/cge-p-minimum-resolved/catalog.json |
+
+**The traversal, demonstrated:** each of the four implemented-requirements links to the same evidence bundle, a real signed pipeline run from the grc-gate CI pipeline, run 31520511303. Running verify-evidence.sh 31520511303 against that link returns CHAIN INTACT: integrity (SHA-256), authenticity (Cosign + Rekor), and preservation (Object Lock retention) all confirmed. An assessor reading this OSCAL document can verify the control without needing anything from me beyond the repo and the vault.
+
+**Validation, run for real:** trestle validate returned VALID for both the component definition and the profile, checked against trestle's actual OSCAL schema, not just parsed as JSON. trestle author profile-resolve fetched the live NIST 800-53 Rev 5 catalog from GitHub and resolved it against the profile's control selection, producing a resolved catalog containing exactly the four selected controls (sc-28, ac-3, au-3, cm-6).
+
+**Path:** oscal/component-definitions/compliant-s3-v1/component-definition.json, oscal/profiles/cge-p-minimum/profile.json, oscal/catalogs/cge-p-minimum-resolved/catalog.json
+**Evidence:** evidence/lab-6-1/trestle-validate.txt
