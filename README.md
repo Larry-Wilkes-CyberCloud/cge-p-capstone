@@ -172,7 +172,6 @@ Extends the Lab 4.3 pipeline so every CI run cryptographically signs its own evi
 
 | Piece | Path | Purpose |
 |---|---|---|
-| Evidence vault (redeployed) | `primitives/evidence-vault/` | S3 bucket with Object Lock in GOVERNANCE mode; the Lab 2.5 vault was destroyed at that lab's cleanup, so this lab redeployed it fresh |
 | Bundle/sign/upload script | `scripts/bundle-sign-upload.sh` | Tars the run's evidence dir, computes its SHA-256, signs it with Cosign (keyless, via Sigstore/Fulcio), and uploads the bundle + checksum + signature + a JSON receipt to the vault |
 | Receipt generator | `scripts/make_receipt.py` | Builds a structured receipt.json (run ID, vault key, S3 version ID, SHA-256, commit, signed-at timestamp) for every signed bundle |
 | Verification script | `scripts/verify-evidence.sh` | Independently re-checks a vaulted bundle's integrity (SHA-256), authenticity (Cosign + Rekor transparency log), and preservation (Object Lock retention status) |
@@ -192,3 +191,42 @@ This demonstrates all four chain-of-custody properties with real evidence rather
 
 **Path:** `primitives/evidence-vault/`, `scripts/bundle-sign-upload.sh`, `scripts/make_receipt.py`, `scripts/verify-evidence.sh`, `.github/workflows/grc-gate.yml`
 **Evidence:** [PR #3](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/pull/3), [signing run 31419052889](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31419052889), Rekor tlog index `2411325216`, [WRITEUP.md](./WRITEUP.md)
+
+## Lab 5.2 — AWS Security Services Baseline
+
+Deploys the AWS-native compliance backbone: CloudTrail for audit logging, with Security Hub and Config scoped out where the account genuinely restricts them. This lab is as much about proving what an account can and can't do as it is about deploying services — every scoping decision below is backed by a real, captured error, not an assumption.
+
+**What was added:**
+
+| Piece | Path | Purpose |
+|---|---|---|
+| CloudTrail (multi-region, log-file validation) | `terraform/baselines/aws/cloudtrail.tf` | Multi-region trail covering all regions and global service events, with enable_log_file_validation for AU-10 (audit integrity) |
+| Security Hub (attempted, blocked) | `terraform/baselines/aws/security_hub.tf` | Confirmed genuinely account-blocked (SubscriptionRequiredException), not an IAM gap — verified via both terraform apply and a direct CLI call |
+| AWS Config (not attempted) | `terraform/baselines/aws/config.tf` | Left commented out per the lab's own guidance |
+
+**CloudTrail — AU-2, AU-12, AU-10:** deployed and verified live. `aws cloudtrail get-trail-status` returned IsLogging: true, with StartLoggingTime and LatestDeliveryTime both populated within minutes of apply.
+
+**Security Hub — genuinely blocked, not skipped:** both `terraform apply` (via aws_securityhub_account) and a direct `aws securityhub enable-security-hub` call independently returned the same error: SubscriptionRequiredException — The AWS Access Key Id needs a subscription for the service. This is not an IAM permissions gap — the same credentials that deployed CloudTrail, oidc/, and the evidence vault in earlier labs hit this wall specifically on Security Hub, consistent with how some training/sandbox-provisioned AWS accounts restrict services requiring a full support/billing relationship. Rather than silently omitting it, the resources are left in security_hub.tf, fully commented out, with the restriction documented inline and the raw CLI error captured as evidence.
+
+**Path:** `terraform/baselines/aws/` (main.tf, variables.tf, cloudtrail.tf, security_hub.tf commented, config.tf commented, outputs.tf)
+**Evidence:** `evidence/lab-5-2/cloudtrail-status.json`, `evidence/lab-5-2/security-hub-restriction.txt`
+
+## Lab 5.4 — GCP Security Services Baseline
+
+Deploys GCP's identity-first compliance backbone: Workload Identity Federation replacing service account keys, and Data Access audit logs turned on for the services that matter most. Org Policy was attempted and genuinely blocked by the project's structure, not skipped — the restriction is documented with real evidence, the same posture Lab 5.2 took toward a blocked Security Hub.
+
+**What was added:**
+
+| Piece | Path | Purpose |
+|---|---|---|
+| Workload Identity Federation | `terraform/baselines/gcp/wif.tf` | Pool, provider, service account, and IAM binding — the provider's attribute_condition is scoped to this exact repo, not the lab template's placeholder |
+| Data Access audit logs | `terraform/baselines/gcp/audit_logs.tf` | DATA_READ, DATA_WRITE, ADMIN_READ enabled for storage, KMS, and IAM services — off by default in every GCP project, the #1 cited GCP audit finding |
+| Org Policy (attempted, blocked) | `terraform/baselines/gcp/org_policy.tf` | Confirmed structurally blocked: cge-p-capstone has no GCP Organization above it, verified via gcloud projects get-ancestors and an empty org-policies list |
+| Demo workflow | `.github/workflows/gcp-wif-demo.yml` | Proves keyless GCP authentication end-to-end via workflow_dispatch |
+
+**Live proof of keyless auth, not just a config:** the demo workflow was actually triggered and run. The job authenticated as `cgep-grc-gate-sa@cge-p-capstone.iam.gserviceaccount.com` with zero service account key files anywhere in the repo or GitHub Secrets — the OIDC-derived credential was written to a temp path at job start and explicitly removed at job end ("Removed exported credentials at ..."). Same security posture as the AWS OIDC pattern from Lab 4.3, different cloud.
+
+**Org Policy — genuinely blocked, not skipped:** cge-p-capstone is a standalone GCP project with no Organization or Folder above it. The account holds roles/owner, ruling out an IAM role gap — the actual failure is IAM_PERMISSION_DENIED on orgpolicy.policies.create, which requires a resource hierarchy context an orgless project doesn't have. A Google Workspace or Cloud Identity account tied to a verified domain would be needed to unlock this. Resources are left in org_policy.tf, fully commented out, with the restriction documented inline and the full error chain captured as evidence.
+
+**Path:** `terraform/baselines/gcp/` (main.tf, variables.tf, org_policy.tf commented, wif.tf, audit_logs.tf, outputs.tf), `.github/workflows/gcp-wif-demo.yml`
+**Evidence:** `evidence/lab-5-4/wif-provider.txt`, `evidence/lab-5-4/iam-policy.json`, `evidence/lab-5-4/org-policy-restriction.txt`, `evidence/lab-5-4/wif-live-auth-proof.txt`, [live workflow run](https://github.com/Larry-Wilkes-CyberCloud/cge-p-capstone/actions/runs/31520675967)
