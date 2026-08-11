@@ -3,9 +3,11 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
-tfplan
+tfplan*
 crash.log
 crash.*.log
 
 # Terraform lock file - actually DO commit this one, so comment it out
 # .terraform.lock.hcl
+# Trestle OSCAL cache (downloaded copies of external catalogs, regeneratable)
+oscal/.trestle/cache/

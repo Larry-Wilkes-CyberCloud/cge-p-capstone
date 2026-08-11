@@ -1,0 +1,20 @@
+VALID: Model C:\Users\larry\terraform\oscal\component-definitions\compliant-s3-v1\component-definition.json passed the Validator to confirm the model passes all registered validation tests.
+VALID: Model C:\Users\larry\terraform\oscal\profiles\cge-p-minimum\profile.json passed the Validator to confirm the model passes all registered validation tests.
+
+--- trestle author profile-resolve -n cge-p-minimum -o cge-p-minimum-resolved ---
+Resolved catalog written to catalogs/cge-p-minimum-resolved/catalog.json (68953 bytes)
+Control IDs present in resolved catalog: ac-3, au-3, cm-6, sc-28
+
+--- Evidence traversal proof: verify-evidence.sh against the linked evidence URI ---
+Component definition's sc-28/ac-3/au-3/cm-6 implemented-requirements all link to:
+s3://cgep-lab-grc-evidence-vault-e7ff5a63/runs/31520511303/evidence-31520511303-c145a2caf173a9522a0973c9fb214333fae404a8.tar.gz
+
+$ EVIDENCE_VAULT=cgep-lab-grc-evidence-vault-e7ff5a63 bash scripts/verify-evidence.sh 31520511303 --profile lab-sandbox
+=== 1. Integrity (SHA-256) ===
+  OK (e574bdcc578af085e9d287a544ae8a2c392454c249b8ea0b50e326fe9591630d)
+=== 2. Authenticity + timestamp (Cosign + Sigstore Rekor) ===
+Verified OK
+  OK (Cosign verified, Rekor entry exists)
+=== 3. Preservation (Object Lock retention) ===
+  OK (retain until 2026-08-12T18:01:20.232000+00:00)
+CHAIN INTACT for run 31520511303

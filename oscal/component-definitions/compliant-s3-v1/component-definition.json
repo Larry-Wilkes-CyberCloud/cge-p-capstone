@@ -1,0 +1,130 @@
+{
+  "component-definition": {
+    "uuid": "a1c32410-0e41-400c-80b3-eb061d6b11d3",
+    "metadata": {
+      "title": "compliant-s3 module v1",
+      "last-modified": "2026-08-11T00:00:00.000000+00:00",
+      "version": "1.0.0",
+      "oscal-version": "1.2.1",
+      "parties": [
+        {
+          "uuid": "99f58fe8-8c22-4540-a169-5208ed05a686",
+          "type": "organization",
+          "name": "Larry Wilkes / CGE-P Capstone"
+        }
+      ]
+    },
+    "components": [
+      {
+        "uuid": "da8324b3-e8b7-4edf-bff1-427928d24903",
+        "type": "software",
+        "title": "compliant-s3",
+        "description": "Reusable Terraform pattern for an AWS S3 primary bucket plus a dedicated access-log bucket. Hardcodes server-side encryption, versioning, public access block, access logging, and required compliance tags.",
+        "purpose": "Provide a compliant-by-default S3 primitive that any team can adopt with three lines of consumer Terraform.",
+        "responsible-roles": [
+          {
+            "role-id": "provider",
+            "party-uuids": ["99f58fe8-8c22-4540-a169-5208ed05a686"]
+          }
+        ],
+        "control-implementations": [
+          {
+            "uuid": "9dd100e0-34d7-4671-8f20-a814e9247b81",
+            "source": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+            "description": "Implementation of NIST 800-53 Rev 5 controls satisfied by this module, enforced continuously by the grc-gate CI pipeline (Lab 4.3) and evidenced by signed, vaulted bundles (Lab 4.4).",
+            "implemented-requirements": [
+              {
+                "uuid": "549d21b7-d65e-4163-a992-5179117fb527",
+                "control-id": "sc-28",
+                "description": "AES-256 server-side encryption is enforced via aws_s3_bucket_server_side_encryption_configuration on both the primary and log buckets. Hardcoded; consumers cannot override.",
+                "props": [
+                  {
+                    "name": "implementation-status",
+                    "value": "implemented"
+                  },
+                  {
+                    "name": "terraform-resource",
+                    "value": "aws_s3_bucket_server_side_encryption_configuration.primary"
+                  }
+                ],
+                "links": [
+                  {
+                    "rel": "evidence",
+                    "href": "s3://cgep-lab-grc-evidence-vault-e7ff5a63/runs/31520511303/evidence-31520511303-c145a2caf173a9522a0973c9fb214333fae404a8.tar.gz",
+                    "text": "Signed pipeline bundle (run 31520511303) containing terraform plan.json, conftest-results.json, and tfsec.sarif. Verify with scripts/verify-evidence.sh 31520511303."
+                  }
+                ]
+              },
+              {
+                "uuid": "101efc3d-c49c-492a-8c04-f79b2c9bcc45",
+                "control-id": "ac-3",
+                "description": "Public access is blocked via aws_s3_bucket_public_access_block with all four flags set true on both buckets, and Conftest's ac3_no_public_aws.rego policy enforces this at the CI gate on every pull request.",
+                "props": [
+                  {
+                    "name": "implementation-status",
+                    "value": "implemented"
+                  },
+                  {
+                    "name": "terraform-resource",
+                    "value": "aws_s3_bucket_public_access_block.primary"
+                  }
+                ],
+                "links": [
+                  {
+                    "rel": "evidence",
+                    "href": "s3://cgep-lab-grc-evidence-vault-e7ff5a63/runs/31520511303/evidence-31520511303-c145a2caf173a9522a0973c9fb214333fae404a8.tar.gz",
+                    "text": "Signed pipeline bundle (run 31520511303) containing terraform plan.json, conftest-results.json, and tfsec.sarif. Verify with scripts/verify-evidence.sh 31520511303."
+                  }
+                ]
+              },
+              {
+                "uuid": "3291e5bf-08eb-4bcb-98f4-435a28570c88",
+                "control-id": "au-3",
+                "description": "Access logging is enabled via aws_s3_bucket_logging, directing access records to a dedicated, versioned log bucket separate from the primary bucket.",
+                "props": [
+                  {
+                    "name": "implementation-status",
+                    "value": "implemented"
+                  },
+                  {
+                    "name": "terraform-resource",
+                    "value": "aws_s3_bucket_logging.primary"
+                  }
+                ],
+                "links": [
+                  {
+                    "rel": "evidence",
+                    "href": "s3://cgep-lab-grc-evidence-vault-e7ff5a63/runs/31520511303/evidence-31520511303-c145a2caf173a9522a0973c9fb214333fae404a8.tar.gz",
+                    "text": "Signed pipeline bundle (run 31520511303) containing terraform plan.json, conftest-results.json, and tfsec.sarif. Verify with scripts/verify-evidence.sh 31520511303."
+                  }
+                ]
+              },
+              {
+                "uuid": "462dd3d6-3f8f-4cf3-a7e4-d72f6e54526f",
+                "control-id": "cm-6",
+                "description": "Required compliance tags (environment, owner, data-classification, control-framework) are enforced on every taggable resource and validated by Conftest's cm6_required_tags_aws.rego policy at the CI gate.",
+                "props": [
+                  {
+                    "name": "implementation-status",
+                    "value": "implemented"
+                  },
+                  {
+                    "name": "terraform-resource",
+                    "value": "aws_s3_bucket.primary"
+                  }
+                ],
+                "links": [
+                  {
+                    "rel": "evidence",
+                    "href": "s3://cgep-lab-grc-evidence-vault-e7ff5a63/runs/31520511303/evidence-31520511303-c145a2caf173a9522a0973c9fb214333fae404a8.tar.gz",
+                    "text": "Signed pipeline bundle (run 31520511303) containing terraform plan.json, conftest-results.json, and tfsec.sarif. Verify with scripts/verify-evidence.sh 31520511303."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
