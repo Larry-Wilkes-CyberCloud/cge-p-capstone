@@ -1,0 +1,29 @@
+name: gcp-wif-demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  auth-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/572032863139/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: cgep-grc-gate-sa@cge-p-capstone.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Prove no key file was used
+        run: |
+          echo "Authenticated as:"
+          gcloud auth list --format="value(account)"
+          echo "Listing GCS buckets in the project (roles/viewer, no key file):"
+          gcloud storage ls --project=cge-p-capstone || echo "(no buckets, or none visible - auth itself is the point)"
